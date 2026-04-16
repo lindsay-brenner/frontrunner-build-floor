@@ -308,7 +308,15 @@ function buildTasks(hull, cid) {
     subasm_hardtop:['Wire hardtop - LED nav lights anchor light spreader lights','Install and wire hardtop speakers','Install TACO outrigger poles and GS-500 bases','Set and fasten hardtop - torque to spec','Final wire terminations - hardtop','Hardtop sign-off - all lighting and electronics operational'],
     subasm_lp:['Wire leaning post / mezz - all electric components','Wire leaning post livewell pump (if equipped)','Verify mezz / leaning post position','Set and bolt leaning post - final install','Final wire terminations - leaning post','Leaning Post sign-off - all components operational'],
   };
-  return BASE[cid]||[];
+  var baseTasks = BASE[cid]||[];
+  // Append any custom routed tasks for this dept
+  var customTasks = (hull.build_options||{}).customTasks||[];
+  customTasks.forEach(function(ct){
+    if(ct.depts && ct.depts.indexOf(cid)!==-1){
+      baseTasks = baseTasks.concat(['CUSTOM: '+ct.desc]);
+    }
+  });
+  return baseTasks;
 }
 
 // ── NAVIGATION ────────────────────────────────────────────────────────────────
@@ -1016,7 +1024,7 @@ function renderHullForm(){
   h+=c('gapTower','Gap Tower - includes 410 VHF, 1 charthead')+c('marlinTower','Marlin Tower - includes 410 VHF, 1 charthead')+c('tournamentAft','Tournament style aft rod holders (14)');
 
   h+=sec('Feature upgrades');
-  h+=c('overTopWindlass','Windlass anchor - over top')+c('drumWindlass','Drum windlass')+c('helm_teak_black','Teak helm chairs - Black teak')+c('helm_teak_brown','Teak helm chairs - Brown teak')+c('rocketLauncher','Rocket launcher')+c('electricToilet','Electric toilet')+c('seatOverLivewell','Seat over livewell')+c('dualRow','Dual row seating')+c('dualRowTacoUpgrade','Dual row TACO seat upgrade')+c('gemluxOutriggers','Gemlux 22ft outriggers and bases')+c('fwdAftShade','FWD and AFT shade with pole holders')+c('consoleSdkPad','Console SeaDek pad')+c('wirelessCharger','Wireless phone charger')+c('footrestHelm','Footrest at helm')+c('insulatedLivewells','Insulated livewells')+c('chillPlateMezz','Chill plate - Mezz')+c('chillPlateSunpad','Chill plate - Sunpad');
+  h+=c('overTopWindlass','Windlass anchor - over top')+c('drumWindlass','Drum windlass')+c('helm_teak_black','Teak helm chairs - Black teak')+c('helm_teak_brown','Teak helm chairs - Brown teak')+c('rocketLauncher','Rocket launcher')+c('electricToilet','Electric toilet')+c('seatOverLivewell','Seat over livewell')+c('dualRow','Dual row seating')+c('dualRowTacoUpgrade','Dual row TACO seat upgrade')+c('gemluxOutriggers','Gemlux 22ft outriggers and bases')+c('fwdAftShade','FWD and AFT shade with pole holders')+c('consoleSdkPad','Console SeaDek pad')+c('wirelessCharger','Wireless phone charger')+c('footrestHelm','Footrest at helm')+c('insulatedLivewells','Insulated livewells')+c('chillPlateMezz','Chill plate - Mezz')+c('chillPlateSunpad','Chill plate - Sunpad')+c('dualBowThrusters','Dual bow thrusters');
 
   h+=sec('Deck ring and add-ons');
   h+=c('underwaterLights','Underwater lights')+c('electricReels','Electric reel outlets')+c('czone_12','CZone dash switches - 12 count');
@@ -1024,10 +1032,95 @@ function renderHullForm(){
   h+=sec('Custom options');
   h+=c('storageAftPort','Storage liner - Port side')+c('storageAftStbd','Storage liner - Stbd side')+c('fishBoxPort','FWD fish box - Port')+c('fishBoxStbd','FWD fish box - Stbd')+c('seakeeperRide','Seakeeper Ride')+c('dualSeakeeper','Dual Seakeeper 3')+c('walkthroughTransom','Walkthrough transom')+c('stbdDiveDoor','Starboard side dive door')+c('portDiveDoor','Port side dive door')+c('manualEngineFlush','Manual engine flush')+c('fauxTeakHelmPod','Faux teak helm pod')+c('integratedTransomSeat','Integrated transom seat')+c('tacoAcSeats','TACO AC seats')+c('kitchenette','Kitchenette leaning post');
 
+  h+=sec('Custom task routing');
+  h+='<div style="font-size:13px;color:#666;margin-bottom:12px;">Add a custom option and assign which departments need to act on it. These tasks will appear in those department task lists.</div>';
+  h+='<div id="custom-tasks-list"></div>';
+  h+='<div class="card" style="padding:14px;margin-bottom:10px;">';
+  h+='<div class="hf-field"><label class="hf-label">Custom option / task description</label><input class="inp" id="ct-desc" placeholder="e.g. Install custom live bait system"/></div>';
+  h+='<div class="hf-field"><label class="hf-label">Departments that need this task</label>';
+  h+='<div id="ct-depts" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;">';
+  var deptList=[['cutgrind','Cut/Grind'],['openhull','Open Hull'],['welding','Welding'],['predeck','Pre Deck'],['lamination','Lamination'],['pi','PI/Parts'],['assembly','Assembly'],['subassembly','Subassembly'],['upholstery','Upholstery'],['final','Final'],['detail','Detail/QC'],['cnc','CNC']];
+  deptList.forEach(function(d){
+    h+='<div class="hf-opt" onclick="ctToggleDept(this)" data-dept="'+d[0]+'" style="padding:8px 12px;border:1px solid #e0e0e0;border-radius:7px;background:#fff;display:inline-flex;">';
+    h+='<div class="hf-box" style="width:20px;height:20px;border-radius:4px;"></div>';
+    h+='<div style="font-size:14px;margin-left:8px;">'+d[1]+'</div></div>';
+  });
+  h+='</div></div>';
+  h+='<button class="btn btn-blue" onclick="ctAdd()">+ Add to task list</button>';
+  h+='</div>';
+
   h+='<div class="hf-field"><label class="hf-label">Additional notes / custom options</label><textarea class="inp" id="hf_notes" rows="3" placeholder="Any other custom options or notes...">'+(o.notes||_hf.notes||'')+'</textarea></div>';
   h+='<div style="display:flex;gap:8px;margin-top:20px;padding-bottom:40px;"><button class="btn btn-green" style="flex:1;padding:14px;font-size:15px;" onclick="hfSave()">'+(isEdit?'Save changes':'Add hull')+'</button><button class="btn" onclick="closeHullForm()">Cancel</button></div>';
 
   el('hull-form-wrap').innerHTML=h;
+  _ctDepts={};
+  renderCtList();
+}
+
+// ── CUSTOM TASK ROUTING ───────────────────────────────────────────────────────
+var _ctDepts = {};
+
+function ctToggleDept(row){
+  var dept = row.getAttribute('data-dept');
+  _ctDepts[dept] = !_ctDepts[dept];
+  var box = row.querySelector('.hf-box');
+  if(_ctDepts[dept]){
+    box.style.borderColor='#1D9E75';box.style.background='#1D9E75';
+    box.innerHTML=chkSvg();
+    row.style.borderColor='#1D9E75';row.style.background='#E1F5EE';
+  } else {
+    box.style.borderColor='#ccc';box.style.background='#fff';
+    box.innerHTML='';
+    row.style.borderColor='#e0e0e0';row.style.background='#fff';
+  }
+}
+
+function ctAdd(){
+  var desc = (el('ct-desc')||{}).value||'';
+  if(!desc.trim()){alert('Please enter a task description.');return;}
+  var depts = Object.keys(_ctDepts).filter(function(k){return _ctDepts[k];});
+  if(depts.length===0){alert('Please select at least one department.');return;}
+
+  if(!_hf.o.customTasks) _hf.o.customTasks = [];
+  _hf.o.customTasks.push({desc:desc.trim(), depts:depts});
+
+  // Reset inputs
+  if(el('ct-desc')) el('ct-desc').value='';
+  _ctDepts={};
+  document.querySelectorAll('#ct-depts .hf-opt').forEach(function(row){
+    var box=row.querySelector('.hf-box');
+    box.style.borderColor='#ccc';box.style.background='#fff';box.innerHTML='';
+    row.style.borderColor='#e0e0e0';row.style.background='#fff';
+  });
+
+  // Re-render the list
+  renderCtList();
+}
+
+function renderCtList(){
+  var list = el('custom-tasks-list');
+  if(!list) return;
+  var tasks = _hf.o.customTasks || [];
+  if(tasks.length===0){list.innerHTML='';return;}
+
+  var deptLabels={cutgrind:'Cut/Grind',openhull:'Open Hull',welding:'Welding',predeck:'Pre Deck',lamination:'Lamination',pi:'PI/Parts',assembly:'Assembly',subassembly:'Subassembly',upholstery:'Upholstery',final:'Final',detail:'Detail/QC',cnc:'CNC'};
+
+  var h='';
+  tasks.forEach(function(task,i){
+    h+='<div class="card" style="margin-bottom:6px;padding:12px 14px;background:#EAF3DE;border-color:#97C459;">';
+    h+='<div style="display:flex;justify-content:space-between;align-items:flex-start;">';
+    h+='<div style="flex:1;"><div style="font-size:14px;font-weight:500;">'+task.desc+'</div>';
+    h+='<div style="font-size:12px;color:#3B6D11;margin-top:4px;">'+task.depts.map(function(d){return deptLabels[d]||d;}).join(', ')+'</div></div>';
+    h+='<button class="btn btn-sm btn-red" style="margin-left:10px;" onclick="ctRemove('+i+')">Remove</button>';
+    h+='</div></div>';
+  });
+  list.innerHTML=h;
+}
+
+function ctRemove(i){
+  if(!_hf.o.customTasks) return;
+  _hf.o.customTasks.splice(i,1);
+  renderCtList();
 }
 
 function hfTog(row){
